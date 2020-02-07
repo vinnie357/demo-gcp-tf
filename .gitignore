@@ -1,3 +1,8 @@
+# project items
+creds/gcp/*.json
+!creds/gcp/my_example_creds.json
+creds.auto.tfvars
+
 # Local .terraform directories
 **/.terraform/*
 
