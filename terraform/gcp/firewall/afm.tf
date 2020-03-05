@@ -8,7 +8,7 @@ locals {
 }
 # firewall
 resource "google_compute_firewall" "mgmt" {
-  name    = "${var.projectPrefix}mgmt-firewall"
+  name    = "${var.projectPrefix}mgmt-firewall${var.buildSuffix}"
   network = "${var.mgmt_vpc.name}"
 
   allow {
@@ -23,7 +23,7 @@ resource "google_compute_firewall" "mgmt" {
   source_ranges = ["${var.adminSrcAddr}"]
 }
 resource "google_compute_firewall" "app" {
-  name    = "${var.projectPrefix}app-firewall"
+  name    = "${var.projectPrefix}app-firewall${var.buildSuffix}"
   network = "${var.ext_vpc.name}"
 
   allow {
@@ -38,7 +38,7 @@ resource "google_compute_firewall" "app" {
   source_ranges = ["${var.adminSrcAddr}"]
 }
 resource "google_compute_firewall" "apptemp" {
-  name    = "${var.projectPrefix}app-firewall-temp"
+  name    = "${var.projectPrefix}app-firewall-temp${var.buildSuffix}"
   network = "${var.int_vpc.name}"
 
   allow {
@@ -78,6 +78,7 @@ data "template_file" "vm_onboard" {
     DO2_Document        = "${data.template_file.vm02_do_json.rendered}"
     AS3_Document        = "${data.template_file.as3_json.rendered}"
     projectPrefix       = "${var.projectPrefix}"
+    buildSuffix         = "${var.buildSuffix}"
   }
 }
 #Declarative Onboarding template 01
@@ -143,12 +144,13 @@ data "template_file" "as3_json" {
 # bigips
 resource "google_compute_instance" "vm_instance" {
   count            = "${var.vm_count}"
-  name             = "${var.projectPrefix}${var.name}-${count.index + 1}-instance"
+  name             = "${var.projectPrefix}${var.name}-${count.index + 1}-instance${var.buildSuffix}"
   machine_type = "${var.bigipMachineType}"
 
   boot_disk {
     initialize_params {
       image = "${var.bigipImage}"
+      size = "128"
     }
   }
   metadata = {
@@ -231,7 +233,7 @@ resource "google_compute_instance" "vm_instance" {
 #   }
 # }
 resource "google_storage_bucket" "bigip-ha" {
-  name     = "${var.projectPrefix}bigip-storage"
+  name     = "${var.projectPrefix}bigip-storage${var.buildSuffix}"
   location = "US"
 
   website {

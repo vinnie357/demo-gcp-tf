@@ -10,43 +10,43 @@ provider "google" {
 # networks
 # vpc
 resource "google_compute_network" "vpc_network_mgmt" {
-  name                    = "${var.projectPrefix}terraform-network-mgmt"
+  name                    = "${var.projectPrefix}terraform-network-mgmt${var.buildSuffix}"
   auto_create_subnetworks = "false"
   routing_mode = "REGIONAL"
 }
 resource "google_compute_subnetwork" "vpc_network_mgmt_sub" {
-  name          = "${var.projectPrefix}mgmt-sub"
+  name          = "${var.projectPrefix}mgmt-sub${var.buildSuffix}"
   ip_cidr_range = "10.0.10.0/24"
   region        = "${var.GCP_REGION}"
   network       = "${google_compute_network.vpc_network_mgmt.self_link}"
 
 }
 resource "google_compute_network" "vpc_network_int" {
-  name                    = "${var.projectPrefix}terraform-network-int"
+  name                    = "${var.projectPrefix}terraform-network-int${var.buildSuffix}"
   auto_create_subnetworks = "false"
   routing_mode = "REGIONAL"
 }
 resource "google_compute_subnetwork" "vpc_network_int_sub" {
-  name          = "${var.projectPrefix}int-sub"
+  name          = "${var.projectPrefix}int-sub${var.buildSuffix}"
   ip_cidr_range = "10.0.20.0/24"
   region        = "${var.GCP_REGION}"
   network       = "${google_compute_network.vpc_network_int.self_link}"
 
 }
 resource "google_compute_network" "vpc_network_ext" {
-  name                    = "${var.projectPrefix}terraform-network-ext"
+  name                    = "${var.projectPrefix}terraform-network-ext${var.buildSuffix}"
   auto_create_subnetworks = "false"
   routing_mode = "REGIONAL"
 }
 resource "google_compute_subnetwork" "vpc_network_ext_sub" {
-  name          = "${var.projectPrefix}ext-sub"
+  name          = "${var.projectPrefix}ext-sub${var.buildSuffix}"
   ip_cidr_range = "10.0.30.0/24"
   region        = "${var.GCP_REGION}"
   network       = "${google_compute_network.vpc_network_ext.self_link}"
 
 }
 resource "google_compute_firewall" "default-allow-internal-mgmt" {
-  name    = "${var.projectPrefix}default-allow-internal-mgmt-firewall"
+  name    = "${var.projectPrefix}default-allow-internal-mgmt-firewall${var.buildSuffix}"
   network = "${google_compute_network.vpc_network_mgmt.name}"
 
   allow {
@@ -66,7 +66,7 @@ resource "google_compute_firewall" "default-allow-internal-mgmt" {
   source_ranges = ["10.0.10.0/24"]
 }
 resource "google_compute_firewall" "default-allow-internal-ext" {
-  name    = "${var.projectPrefix}default-allow-internal-ext-firewall"
+  name    = "${var.projectPrefix}default-allow-internal-ext-firewall${var.buildSuffix}"
   network = "${google_compute_network.vpc_network_ext.name}"
 
   allow {
@@ -86,7 +86,7 @@ resource "google_compute_firewall" "default-allow-internal-ext" {
   source_ranges = ["10.0.30.0/24"]
 }
 resource "google_compute_firewall" "default-allow-internal-int" {
-  name    = "${var.projectPrefix}default-allow-internal-int-firewall"
+  name    = "${var.projectPrefix}default-allow-internal-int-firewall${var.buildSuffix}"
   network = "${google_compute_network.vpc_network_int.name}"
 
   allow {
@@ -120,6 +120,7 @@ module "application" {
   int_vpc = "${google_compute_network.vpc_network_int}"
   int_subnet = "${google_compute_subnetwork.vpc_network_int_sub}"
   projectPrefix = "${var.projectPrefix}"
+  buildSuffix = "${var.buildSuffix}"
   region = "${var.GCP_REGION}"
 }
 
@@ -139,6 +140,7 @@ module "firewall" {
   int_subnet = "${google_compute_subnetwork.vpc_network_int_sub}"
   ext_subnet = "${google_compute_subnetwork.vpc_network_ext_sub}"
   projectPrefix = "${var.projectPrefix}"
+  buildSuffix = "${var.buildSuffix}"
   service_accounts = "${var.service_accounts}"
   region = "${var.GCP_REGION}"
 }

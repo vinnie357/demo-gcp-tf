@@ -8,7 +8,8 @@ while [ \$count -le 4 ]
     sleep 1
     count=\$[\$count+1]
     # check task code
-    while true
+    taskCount=0
+    while [ \$taskCount -le 5 ]
     do
         doCodeType=\$(curl -s -u $CREDS -X GET $local_host$doTaskUrl/\$task | jq -r type )
         if [[ "\$doCodeType" == "object" ]]; then
@@ -43,8 +44,9 @@ while [ \$count -le 4 ]
                 ;;
             RUNNING)
                 # running
-                echo "DO Status: \$status task: \$task Not done yet..."
+                echo "DO Status: \$status task: \$task Not done yet...count:\$taskCount"
                 sleep 30
+                taskCount=\$[\$taskCount+1]
                 ;;
             FAILED)
                 # failed

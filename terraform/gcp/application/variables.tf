@@ -29,7 +29,9 @@ variable "int_subnet" {
 variable "projectPrefix" {
   description = "prefix for resources"
 }
-
+variable "buildSuffix" {
+  description = "resource suffix"
+}
 variable "region" {
   description = "All resources will be launched in this region."
   default = "us-east1"

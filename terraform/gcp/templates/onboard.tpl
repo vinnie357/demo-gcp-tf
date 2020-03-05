@@ -148,6 +148,7 @@ AS3_FN=$(basename "$AS3_URL")
 atc="f5-declarative-onboarding f5-appsvcs-extension f5-telemetry-streaming f5-cloud-failover-extension"
 #atc="f5-declarative-onboarding f5-appsvcs-extension"
 # constants
+local_host="http://localhost:8100"
 mgmt_port=`tmsh list sys httpd ssl-port | grep ssl-port | sed 's/ssl-port //;s/ //g'`
 authUrl="/mgmt/shared/authn/login"
 rpmInstallUrl="/mgmt/shared/iapp/package-management-tasks"
@@ -159,7 +160,7 @@ doTaskUrl="/mgmt/shared/declarative-onboarding/task"
 # as3
 as3Url="/mgmt/shared/appsvcs/declare"
 as3CheckUrl="/mgmt/shared/appsvcs/info"
-as3TaskUrl="/mgmt/shared/appsvcs/task/"
+as3TaskUrl="/mgmt/shared/appsvcs/task"
 # ts
 tsUrl="/mgmt/shared/telemetry/declare"
 tsCheckUrl="/mgmt/shared/telemetry/info" 
@@ -546,8 +547,10 @@ done
 }
 
 PROJECTPREFIX=${projectPrefix}
-bigip1url=$(echo "https://storage.googleapis.com/storage/v1/b/"$PROJECTPREFIX"bigip-storage/o/bigip-1?alt=media")
-bigip2url=$(echo "https://storage.googleapis.com/storage/v1/b/"$PROJECTPREFIX"bigip-storage/o/bigip-2?alt=media")
+buildSuffix=${buildSuffix}
+hostName=$(curl -s -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/hostname )
+bigip1url=$(echo "https://storage.googleapis.com/storage/v1/b/"$PROJECTPREFIX"bigip-storage$buildSuffix/o/bigip-1?alt=media")
+bigip2url=$(echo "https://storage.googleapis.com/storage/v1/b/"$PROJECTPREFIX"bigip-storage$buildSuffix/o/bigip-2?alt=media")
 token=$(curl -s -f --retry 20 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token' -H 'Metadata-Flavor: Google' | jq -r .access_token )
 bigip1ip=$(curl -s -f --retry 20 "$bigip1url" -H 'Metadata-Flavor: Google' -H "Authorization":"Bearer $token" )
 bigip2ip=$(curl -s -f --retry 20 "$bigip2url" -H 'Metadata-Flavor: Google' -H "Authorization":"Bearer $token" )
@@ -558,10 +561,12 @@ doReplaceOne=$(getPeerAddress $INT3ADDRESS 1)
 doReplaceTwo=$(getPeerAddress $INT3ADDRESS -1)
 echo " internal address: $INT3ADDRESS "
 echo "sync_ip_01:$bigip1ip, sync_ip_02:$bigip2ip"
+sed -i "s/-device-hostname-/$hostName/g" /config/do1.json
 sed -i "s/-remote-peer-addr-/$bigip2ip/g" /config/do1.json
 sed -i "s/-mgmt-gw-addr-/$MGMTGATEWAY/g" /config/do1.json
 sed -i "s/-internal-self-address-/$INT3ADDRESS/g" /config/do1.json
 # internal address on box two will decrement
+sed -i "s/-device-hostname-/$hostName/g" /config/do2.json
 sed -i "s/-remote-peer-addr-/$bigip1ip/g" /config/do2.json
 sed -i "s/-mgmt-gw-addr-/$MGMTGATEWAY/g" /config/do2.json
 sed -i "s/-internal-self-address-/$INT3ADDRESS/g" /config/do2.json
@@ -573,89 +578,96 @@ sed -i "s/-sd-sa-token-b64-/$token/g" /config/as3.json
 
 # end modify as3
 function runDO() {
-    count=0
-    while [ $count -le 4 ]
-        do 
-        # make task
-        task=$(curl -s -u $CREDS -H "Content-Type: Application/json" -H 'Expect:' -X POST http://localhost:8100$doUrl -d @/config/$1 | jq -r .id)
-        taskId=$(echo $task)
-        echo "starting DO task: $taskId"
+count=0
+while [ $count -le 4 ]
+    do 
+    # make task
+    task=$(curl -s -u $CREDS -H "Content-Type: Application/json" -H 'Expect:' -X POST $local_host$doUrl -d @/config/$1 | jq -r .id)
+    echo "====== starting DO task: $task =========="
+    sleep 1
+    count=$[$count+1]
+    # check task code
+    while true
+    do
+        doCodeType=$(curl -s -u $CREDS -X GET $local_host$doTaskUrl/$task | jq -r type )
+        if [[ "$doCodeType" == "object" ]]; then
+            code=$(curl -s -u $CREDS -X GET $local_host$doTaskUrl/$task | jq .result.code)
+            echo "object $code"
+        elif [ "$doCodeType" == "array" ]; then  
+            echo "array $code check task, breaking"
+            break
+        else
+            echo "unknown type:$doCodeType"
+        fi
         sleep 1
-        count=$[$count+1]
-        # check task code
-        while true
-        do
-            code=$(restcurl -u $CREDS /mgmt/shared/declarative-onboarding/task/$task | jq -r .code)
+        if [[ -n "$code" ]]; then
+            status=$(curl -s -u $CREDS $local_host$doTaskUrl/$task | jq -r .result.status)
             sleep 1
-            if  [ "$code" == "null" ] || [ -z "$code" ]; then
-                status=$(restcurl -u $CREDS /mgmt/shared/declarative-onboarding/task/$task | jq -r .result.status)
-                sleep 1
-                # 200,202,422,400,404,500
-                echo "DO: $task response:$code"
-                sleep 1
-                status=$(getDoStatus $taskId)
-                sleep 1
-                #FINISHED,STARTED,RUNNING,ROLLING_BACK,FAILED,ERROR,NULL
-                case $status in 
-                FINISHED)
-                    # finished
-                    echo " $taskId status: $status "
-                    # bigstart start dhclient
-                    break 2
-                    ;;
-                STARTED)
-                    # started
-                    echo " $filename status: $status "
-                    sleep 30
-                    ;;
-                RUNNING)
-                    # running
-                    echo "DO Status: $status task: $taskId Not done yet..."
-                    sleep 30
-                    ;;
-                FAILED)
-                    # failed
-                    error=$(getDoStatus $taskId)
-                    echo "failed $taskId, $error"
-                    #count=$[$count+1]
-                    break
-                    ;;
-                ERROR)
-                    # error
-                    error=$(getDoStatus $taskId)
-                    echo "Error $taskId, $error"
-                    #count=$[$count+1]
-                    break
-                    ;;
-                ROLLING_BACK)
-                    # Rolling back
-                    echo "Rolling back failed status: $status task: $taskId"
-                    break
-                    ;;
-                OK)
-                    # complete no change
-                    echo "Complete no change status: $status task: $taskId"
-                    break 2
-                    ;;
-                *)
-                    # other
-                    echo "other: $status"
-                    debug=$(restcurl -u $CREDS $doTaskUrl/$taskId | jq .)
-                    echo "debug: $debug"
-                    error=$(getDoStatus $taskId)
-                    echo "Other $taskId, $error"
-                    # count=$[$count+1]
-                    sleep 30
-                    ;;
-                esac
-            else
-                echo "DO status code: $code"
-                debug=$(restcurl -u $CREDS $doTaskUrl/$taskId | jq .)
-                echo "debug do code: $debug"
+            echo "object $status"
+            # 200,202,422,400,404,500,422
+            echo "DO: $task response:$code status:$status"
+            sleep 1
+            #FINISHED,STARTED,RUNNING,ROLLING_BACK,FAILED,ERROR,NULL
+            case $status in 
+            FINISHED)
+                # finished
+                echo " $task status: $status "
+                # bigstart start dhclient
+                break 2
+                ;;
+            STARTED)
+                # started
+                echo " $filename status: $status "
+                sleep 30
+                ;;
+            RUNNING)
+                # running
+                echo "DO Status: $status task: $task Not done yet..."
+                sleep 30
+                ;;
+            FAILED)
+                # failed
+                error=$(curl -s -u $CREDS $local_host$doTaskUrl/$task | jq -r .result.status)
+                echo "failed $task, $error"
+                #count=$[$count+1]
+                break
+                ;;
+            ERROR)
+                # error
+                error=$(curl -s -u $CREDS $local_host$doTaskUrl/$task | jq -r .result.status)
+                echo "Error $task, $error"
+                #count=$[$count+1]
+                break
+                ;;
+            ROLLING_BACK)
+                # Rolling back
+                echo "Rolling back failed status: $status task: $task"
+                break
+                ;;
+            OK)
+                # complete no change
+                echo "Complete no change status: $status task: $task"
+                break 2
+                ;;
+            *)
+                # other
+                echo "other: $status"
+                debug=$(curl -s -u $CREDS $local_host$doTaskUrl/$task | jq .)
+                echo "debug: $debug"
+                error=$(curl -s -u $CREDS $local_host$doTaskUrl/$task | jq -r .result.status)
+                echo "Other $task, $error"
                 # count=$[$count+1]
-            fi
-        done
+                sleep 30
+                ;;
+            esac
+        else
+            echo "DO status code: $code"
+            debug=$(curl -s -u $CREDS $local_host$doTaskUrl/$task | jq .)
+            echo "debug do code: $debug"
+            # count=$[$count+1]
+        fi
     done
+done
 }
 # run DO
 count=0

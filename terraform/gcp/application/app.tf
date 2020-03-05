@@ -15,7 +15,7 @@ data "template_file" "dockerApp" {
 }
 
 resource "google_compute_instance" "vm_instance" {
-  name         = "${var.projectPrefix}terraform-app-instance"
+  name         = "${var.projectPrefix}terraform-app-instance${var.buildSuffix}"
   machine_type = "f1-micro"
 
   boot_disk {

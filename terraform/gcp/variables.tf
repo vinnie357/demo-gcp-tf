@@ -57,3 +57,6 @@ variable "adminAccount" {
 variable "projectPrefix" {
   description = "resource prefix"
 }
+variable "buildSuffix" {
+  description = "resource suffix"
+}

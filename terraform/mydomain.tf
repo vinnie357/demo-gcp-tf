@@ -15,5 +15,12 @@ module "gcp" {
     adminAccount = "${data.vault_generic_secret.bigip.data["admin"]}"
     adminPass = "${data.vault_generic_secret.bigip.data["pass"]}"
     projectPrefix = "${var.projectPrefix}"
+    buildSuffix = "-${random_pet.buildSuffix.id}"
     service_accounts = "${var.gcp_service_accounts}"
+}
+
+resource "random_pet" "buildSuffix" {
+  #length = ""
+  #prefix = "${var.projectPrefix}"
+  separator = "-"
 }

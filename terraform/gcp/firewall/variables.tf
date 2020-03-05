@@ -28,6 +28,9 @@ variable "ext_subnet" {
 variable "projectPrefix" {
   description = "prefix for resources"
 }
+variable "buildSuffix" {
+  description = "resource suffix"
+}
 variable "region" {
   description = "All resources will be launched in this region."
   default = "us-east1"
@@ -45,7 +48,8 @@ variable "bigipImage" {
 
 variable "bigipMachineType" {
     description = "bigip gce machine type/size"
-    default = "n1-standard-4"
+    #default = "n1-standard-4"
+    default = "n1-standard-8"
 }
 
 variable "vm_count" {
@@ -114,7 +118,7 @@ variable "health_check_port" {
 variable "health_check_healthy_threshold" {
   description = "A so-far unhealthy instance will be marked healthy after this many consecutive successes. The default value is 2."
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "health_check_unhealthy_threshold" {
@@ -126,13 +130,13 @@ variable "health_check_unhealthy_threshold" {
 variable "health_check_interval" {
   description = "How often (in seconds) to send a health check. Default is 5."
   type        = number
-  default     = 5
+  default     = 1
 }
 
 variable "health_check_timeout" {
   description = "How long (in seconds) to wait before claiming failure. The default value is 5 seconds. It is invalid for 'health_check_timeout' to have greater value than 'health_check_interval'"
   type        = number
-  default     = 5
+  default     = 1
 }
 
 variable "health_check_path" {

@@ -171,6 +171,18 @@ echo " admin account changed"
 # echo "admin:$admin_password" | chpasswd
 # echo "changed admin password"
 #
+# end admin account and password
+# 
+# start modify appdata directory size
+echo "setting app directory size"
+tmsh show sys disk directory /appdata
+# 130,985,984 26,128,384 52,256,768
+tmsh modify /sys disk directory /appdata new-size 52256768
+tmsh show sys disk directory /appdata
+tmsh save sys config
+echo "done setting app directory size"
+# end modify appdata directory size
+#
 # vars
 #
 CREDS="$admin_username:$admin_password"
@@ -690,8 +702,10 @@ submit cli transaction" | tmsh -q
 #
 # modify DO
 PROJECTPREFIX=${projectPrefix}
-bigip1url=\$(echo "https://storage.googleapis.com/storage/v1/b/"\$PROJECTPREFIX"bigip-storage/o/bigip-1?alt=media")
-bigip2url=\$(echo "https://storage.googleapis.com/storage/v1/b/"\$PROJECTPREFIX"bigip-storage/o/bigip-2?alt=media")
+buildSuffix=${buildSuffix}
+hostName=\$(curl -s -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/hostname )
+bigip1url=\$(echo "https://storage.googleapis.com/storage/v1/b/"\$PROJECTPREFIX"bigip-storage\$buildSuffix/o/bigip-1?alt=media")
+bigip2url=\$(echo "https://storage.googleapis.com/storage/v1/b/"\$PROJECTPREFIX"bigip-storage\$buildSuffix/o/bigip-2?alt=media")
 token=\$(curl -s -f --retry 20 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token' -H 'Metadata-Flavor: Google' | jq -r .access_token )
 bigip1ip=\$(curl -s -f --retry 20 "\$bigip1url" -H "Metadata-Flavor: Google" -H "Authorization: Bearer \$token" )
 bigip2ip=\$(curl -s -f --retry 20 "\$bigip2url" -H "Metadata-Flavor: Google" -H "Authorization: Bearer \$token" )
@@ -699,9 +713,11 @@ echo "one: \$bigip1ip"
 echo "two: \$bigip2ip"
 echo " internal address: $INT3ADDRESS "
 echo "sync_ip_01:\$bigip1ip, sync_ip_02:\$bigip2ip"
+sed -i "s/-device-hostname-/\$hostName/g" /config/do1.json
 sed -i "s/-remote-peer-addr-/\$bigip2ip/g" /config/do1.json
 sed -i "s/-mgmt-gw-addr-/$MGMTGATEWAY/g" /config/do1.json
 sed -i "s/-internal-self-address-/$INT3ADDRESS/g" /config/do1.json
+sed -i "s/-device-hostname-/\$hostName/g" /config/do2.json
 sed -i "s/-remote-peer-addr-/\$bigip1ip/g" /config/do2.json
 sed -i "s/-mgmt-gw-addr-/$MGMTGATEWAY/g" /config/do2.json
 sed -i "s/-internal-self-address-/$INT3ADDRESS/g" /config/do2.json
@@ -725,7 +741,8 @@ while [ \$count -le 4 ]
     sleep 1
     count=\$[\$count+1]
     # check task code
-    while true
+    taskCount=0
+    while [ \$taskCount -le 5 ]
     do
         doCodeType=\$(curl -s -u $CREDS -X GET $local_host$doTaskUrl/\$task | jq -r type )
         if [[ "\$doCodeType" == "object" ]]; then
@@ -760,8 +777,9 @@ while [ \$count -le 4 ]
                 ;;
             RUNNING)
                 # running
-                echo "DO Status: \$status task: \$task Not done yet..."
+                echo "DO Status: \$status task: \$task Not done yet...count:\$taskCount"
                 sleep 30
+                taskCount=\$[\$taskCount+1]
                 ;;
             FAILED)
                 # failed
@@ -846,57 +864,74 @@ while [ \$count -le 4 ]
 done
 function runAS3 () {
     count=0
-    while true
+    while [ \$count -le 4 ]
         do
             # make task
             task=\$(curl -s -u $CREDS -H "Content-Type: Application/json" -H 'Expect:' -X POST $local_host$as3Url?async=true -d @/config/as3.json | jq -r .id)
-            taskId=\$(echo \$task)
-            echo "starting as3 task: \$task"
+            echo "===== starting as3 task: \$task ====="
             sleep 1
             count=\$[\$count+1]
             # check task code
-        while true
+            taskCount=0
+        while [ \$taskCount -le 3 ]
         do
-            status=\$(restcurl -s -u $CREDS $as3TaskUrl/\$task | jq ".items[] | select(.id | contains (\"\$task\")) | .results")
-            # codes=\$(echo "\$status" | jq .[].code)
-            messages=\$(echo "\$status" | jq -r .[].message)
-            tenants=\$(echo "\$status" | jq .[].tenant)
-            case \$messages in
-            *Error*)
-                # error
-                echo -e "Error: \$task status: \$messages tenants: \$tenants "
+            as3CodeType=\$(curl -s -u $CREDS -X GET $local_host$as3TaskUrl/\$task | jq -r type )
+            if [[ "\$as3CodeType" == "object" ]]; then
+                code=\$(curl -s -u $CREDS -X GET $local_host$as3TaskUrl/\$task | jq -r .results[].message)
+                tenants=\$(curl -s -u $CREDS -X GET $local_host$as3TaskUrl/\$task | jq -r .results[].tenant)
+                echo "object \$code"
+            elif [ "\$as3CodeType" == "array" ]; then  
+                echo "array \$code check task, breaking"
+                break
+            else
+                echo "unknown type:\$as3CodeType"
+            fi
+            sleep 1
+            if [[ -n "\$code" ]]; then
+                status=\$(curl -s -u $CREDS $local_host$as3TaskUrl/\$task | jq -r .results[].message)
+                case \$status in
+                *Error*)
+                    # error
+                    echo -e "Error: \$task status: \$status tenants: \$tenants "
+                    break
+                    ;;
+                *failed*)
+                    # failed
+                    echo -e "failed: \$task status: \$status tenants: \$tenants "
+                    break
+                    ;;
+                *success*)
+                    # successful!
+                    echo -e "success: \$task status: \$status tenants: \$tenants "
+                    break 3
+                    ;;
+                no*change)
+                    # finished
+                    echo -e "no change: \$task status: \$status tenants: \$tenants "
+                    break 3
+                    ;;
+                in*progress)
+                    # in progress
+                    echo -e "Running: \$task status: \$status tenants: \$tenants count: \$taskCount "
+                    sleep 60
+                    taskCount=\$[\$taskCount+1]
+                    ;;
+                *)
+                # other
+                echo "status: \$status"
+                debug=\$(curl -s -u $CREDS $local_host$as3TaskUrl/\$task | jq .)
+                echo "debug: \$debug"
+                error=\$(curl -s -u $CREDS $local_host$as3TaskUrl/\$task | jq -r '.results[].message')
+                echo "Other: \$task, \$error"
                 break
                 ;;
-            *failed*)
-                # failed
-                echo -e "failed: \$task status: \$messages tenants: \$tenants "
-                break
-                ;;
-            *success*)
-                # successful!
-                echo -e "success: \$task status: \$messages tenants: \$tenants "
-                break 3
-                ;;
-            no*change)
-                # finished
-                echo -e "no change: \$task status: \$messages tenants: \$tenants "
-                break 3
-                ;;
-            in*progress)
-                # in progress
-                echo -e "Running: \$task status: \$messages tenants: \$tenants "
-                sleep 60
-                ;;
-            *)
-            # other
-            echo "status: \$messages"
-            debug=\$(curl -s -u $CREDS $local_host/mgmt/shared/appsvcs/task/\$task | jq .)
-            echo "debug: \$debug"
-            error=\$(curl -s -u $CREDS $local_host/mgmt/shared/appsvcs/task/\$task | jq -r '.results[].message')
-            echo "Other: \$task, \$error"
-            break
-            ;;
-            esac
+                esac
+            else
+                echo "AS3 status code: \$code"
+                debug=\$(curl -s -u $CREDS $local_host$doTaskUrl/\$task | jq .)
+                echo "debug do code: \$debug"
+                # count=\$[\$count+1]
+            fi
         done
     done
 }

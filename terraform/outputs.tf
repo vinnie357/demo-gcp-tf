@@ -28,3 +28,7 @@ output "load_balancer_ip_address" {
   description = "IP address of the Load Balancer"
   value       = "https://${module.gcp.load_balancer_ip_address}"
 }
+
+output "buildSuffix" {
+  value = "-${random_pet.buildSuffix.id}"
+}

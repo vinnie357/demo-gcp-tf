@@ -5,7 +5,7 @@
 resource "google_compute_target_pool" "default" {
   #provider         = google-beta
   #project          = var.project
-  name             = "${var.projectPrefix}${var.name}-tp"
+  name             = "${var.projectPrefix}${var.name}-tp${var.buildSuffix}"
   region           = var.region
   session_affinity = var.session_affinity
   instances = "${google_compute_instance.vm_instance.*.self_link}"
@@ -15,7 +15,7 @@ resource "google_compute_target_pool" "default" {
 
 # fowarding rule
 resource "google_compute_forwarding_rule" "default" {
-  name                  = "${var.projectPrefix}firewall-forwarding-rule"
+  name                  = "${var.projectPrefix}firewall-forwarding-rule${var.buildSuffix}"
   port_range            = 443
   target                = google_compute_target_pool.default.self_link
 }
@@ -41,7 +41,7 @@ resource "google_compute_http_health_check" "default" {
 
   #provider            = google-beta
   #project             = var.project
-  name                = "${var.projectPrefix}${var.name}-hc"
+  name                = "${var.projectPrefix}${var.name}-hc${var.buildSuffix}"
   request_path        = var.health_check_path
   port                = var.health_check_port
   check_interval_sec  = var.health_check_interval
@@ -60,7 +60,7 @@ resource "google_compute_firewall" "health_check" {
 
   #provider = google-beta
   #project  = var.network_project == null ? var.project : var.network_project
-  name     = "${var.projectPrefix}${var.name}-hc-fw"
+  name     = "${var.projectPrefix}${var.name}-hc-fw${var.buildSuffix}"
   network  = "${var.ext_vpc.name}"
 
   allow {
