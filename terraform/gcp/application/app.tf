@@ -26,7 +26,7 @@ resource "google_compute_instance" "vm_instance" {
     }
   }
   metadata = {
-    ssh-keys = "${var.adminAccountName}:${file(var.gce_ssh_pub_key_file)}"
+    ssh-keys = "${var.adminAccountName}:${var.gce_ssh_pub_key_file}"
     block-project-ssh-keys = true
     juiceShop = "dev"
     demoApp = "dev"

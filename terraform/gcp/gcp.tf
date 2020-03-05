@@ -17,7 +17,7 @@ resource "google_compute_network" "vpc_network_mgmt" {
 resource "google_compute_subnetwork" "vpc_network_mgmt_sub" {
   name          = "${var.projectPrefix}mgmt-sub"
   ip_cidr_range = "10.0.10.0/24"
-  region        = "us-east1"
+  region        = "${var.GCP_REGION}"
   network       = "${google_compute_network.vpc_network_mgmt.self_link}"
 
 }
@@ -29,7 +29,7 @@ resource "google_compute_network" "vpc_network_int" {
 resource "google_compute_subnetwork" "vpc_network_int_sub" {
   name          = "${var.projectPrefix}int-sub"
   ip_cidr_range = "10.0.20.0/24"
-  region        = "us-east1"
+  region        = "${var.GCP_REGION}"
   network       = "${google_compute_network.vpc_network_int.self_link}"
 
 }
@@ -41,7 +41,7 @@ resource "google_compute_network" "vpc_network_ext" {
 resource "google_compute_subnetwork" "vpc_network_ext_sub" {
   name          = "${var.projectPrefix}ext-sub"
   ip_cidr_range = "10.0.30.0/24"
-  region        = "us-east1"
+  region        = "${var.GCP_REGION}"
   network       = "${google_compute_network.vpc_network_ext.self_link}"
 
 }
@@ -120,6 +120,7 @@ module "application" {
   int_vpc = "${google_compute_network.vpc_network_int}"
   int_subnet = "${google_compute_subnetwork.vpc_network_int_sub}"
   projectPrefix = "${var.projectPrefix}"
+  region = "${var.GCP_REGION}"
 }
 
 module "firewall" {
@@ -139,6 +140,7 @@ module "firewall" {
   ext_subnet = "${google_compute_subnetwork.vpc_network_ext_sub}"
   projectPrefix = "${var.projectPrefix}"
   service_accounts = "${var.service_accounts}"
+  region = "${var.GCP_REGION}"
 }
 
 # module "waf" {
@@ -158,17 +160,3 @@ module "firewall" {
 #   ext_subnet = "${google_compute_subnetwork.vpc_network_ext_sub}"
 #   projectPrefix = "${var.projectPrefix}"
 # }
-
-output "f5vm01_mgmt_public_ip" {
-  value = "${module.firewall.f5vm01_mgmt_public_ip}"
-}
-output "f5vm02_mgmt_public_ip" {
-  value = "${module.firewall.f5vm02_mgmt_public_ip}"
-}
-
-output "f5vm01_app_public_ip" {
-  value = "${module.firewall.f5vm01_app_public_ip}"
-}
-output "f5vm02_app_public_ip" {
-  value = "${module.firewall.f5vm02_app_public_ip}"
-}

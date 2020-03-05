@@ -32,14 +32,29 @@ resource "google_compute_firewall" "app" {
 
   allow {
     protocol = "tcp"
-    ports    = ["80", "443"]
+    ports    = ["80", "443", "22"]
+  }
+
+  source_ranges = ["${var.adminSrcAddr}"]
+}
+resource "google_compute_firewall" "apptemp" {
+  name    = "${var.projectPrefix}app-firewall-temp"
+  network = "${var.int_vpc.name}"
+
+  allow {
+    protocol = "icmp"
+  }
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
   }
 
   source_ranges = ["${var.adminSrcAddr}"]
 }
 # Setup Onboarding scripts
 data "template_file" "vm_onboard" {
-  template = "${file("${path.root}/gcp/templates/onboard.tpl")}"
+  template = "${file("${path.root}/gcp/templates/onboard_v2.tpl")}"
 
   vars = {
     uname        	      = "${var.adminAccountName}"
@@ -50,6 +65,7 @@ data "template_file" "vm_onboard" {
     as3Version            = "latest"
     tsVersion             = "latest"
     cfVersion             = "latest"
+    fastVersion           = "0.2.0"
     doExternalDeclarationUrl = "https://example.domain.com/do.json"
     as3ExternalDeclarationUrl = "https://example.domain.com/as3.json"
     tsExternalDeclarationUrl = "https://example.domain.com/ts.json"
@@ -117,7 +133,8 @@ data "template_file" "vm02_do_json" {
 data "template_file" "as3_json" {
   template = "${file("${path.root}/gcp/templates/scca.json")}"
   vars ={
-      uuid = "uuid()"
+      uuid = "${uuid()}"
+      #virtualAddressExternal ="${google_compute_forwarding_rule.default.ip_address}"
     #   sdCreds = "${base64encode(file("/creds/gcp/${var.GCP_SA_FILE}.json"))}"
   }
 }
@@ -135,27 +152,29 @@ resource "google_compute_instance" "vm_instance" {
     }
   }
   metadata = {
-    ssh-keys = "${var.adminAccountName}:${file(var.gce_ssh_pub_key_file)}"
+    ssh-keys = "${var.adminAccountName}:${var.gce_ssh_pub_key_file}"
     block-project-ssh-keys = true
+    # this is best for a long running instance as it is only evaulated and run once, changes to the template do NOT destroy the running instance.
     #startup-script = "${data.template_file.vm_onboard.rendered}"
     deviceId = "${count.index + 1}"
  }
+ # this is best for dev, as it runs ANY time there are changes and DESTROYS the instances
   metadata_startup_script = "${data.template_file.vm_onboard.rendered}"
 
+  network_interface {
+    # external
+    # A default network is created for all GCP projects
+    network       = "${var.ext_vpc.name}"
+    subnetwork = "${var.ext_subnet.name}"
+    # network = "${google_compute_network.vpc_network.self_link}"
+    access_config {
+    }
+  }
   network_interface {
     # mgmt
     # A default network is created for all GCP projects
     network       = "${var.mgmt_vpc.name}"
     subnetwork = "${var.mgmt_subnet.name}"
-    # network = "${google_compute_network.vpc_network.self_link}"
-    access_config {
-    }
-  }
-    network_interface {
-    # external
-    # A default network is created for all GCP projects
-    network       = "${var.ext_vpc.name}"
-    subnetwork = "${var.ext_subnet.name}"
     # network = "${google_compute_network.vpc_network.self_link}"
     access_config {
     }
@@ -232,6 +251,29 @@ content = "${var.vm_count >= 2 ? "${google_compute_instance.vm_instance.1.networ
 bucket = "${google_storage_bucket.bigip-ha.name}"
 }
 
+resource "null_resource" "wait" {
+   #https://ilhicas.com/2019/08/17/Terraform-local-exec-run-always.html
+   triggers = {
+    always_run = "${timestamp()}"
+  }
+  provisioner "local-exec" {
+    command = <<-EOF
+        checks=0
+        while [[ "$checks" -lt 4 ]]; do
+            echo "waiting on: https://${google_compute_instance.vm_instance.0.network_interface.1.access_config.0.nat_ip}" 
+            curl -sk --retry 15 --retry-connrefused --retry-delay 10 https://${google_compute_instance.vm_instance.0.network_interface.1.access_config.0.nat_ip}
+        if [ $? == 0 ]; then
+            echo "mgmt ready"
+            break
+        fi
+        echo "mgmt not ready yet"
+        let checks=checks+1
+        sleep 10
+        done
+    EOF
+    interpreter = ["bash", "-c"]
+  }
+}
 # gcloud compute instances describe afm-1-instance --format='get(networkInterfaces[0].accessConfigs[0].natIP)'
 
 #output "f5vm01_mgmt_public_ip" { value = "${google_compute_instance.afm-1-instance.access_config[0].natIP}" }
@@ -240,11 +282,6 @@ bucket = "${google_storage_bucket.bigip-ha.name}"
 # output "ip" {
 #  value = "${google_compute_instance.default.network_interface.0.access_config.0.nat_ip}"
 # }
-output "f5vm01_mgmt_public_ip" { value = "${google_compute_instance.vm_instance.0.network_interface.0.access_config.0.nat_ip}" }
-output "f5vm01_app_public_ip" { value = "${google_compute_instance.vm_instance.0.network_interface.1.access_config.0.nat_ip}" }
-
-output "f5vm02_mgmt_public_ip" { value = "${var.vm_count >= 2 ? "${google_compute_instance.vm_instance.1.network_interface.0.access_config.0.nat_ip}" : "none"}"}
-output "f5vm02_app_public_ip" { value = "${var.vm_count >= 2 ? "${google_compute_instance.vm_instance.1.network_interface.1.access_config.0.nat_ip}" : "none" }"}
 
 # // A variable for extracting the external ip of the instance
 # output "ip" {

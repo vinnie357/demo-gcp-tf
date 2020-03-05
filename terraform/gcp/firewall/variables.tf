@@ -28,7 +28,10 @@ variable "ext_subnet" {
 variable "projectPrefix" {
   description = "prefix for resources"
 }
-
+variable "region" {
+  description = "All resources will be launched in this region."
+  default = "us-east1"
+}
 variable "name" {
   description = "device name"
   default = "afm"
@@ -92,3 +95,59 @@ variable onboard_log { default = "/var/log/startup-script.log" }
 variable DO_onboard_URL { default = "https://github.com/F5Networks/f5-declarative-onboarding/releases/download/v1.9.0/f5-declarative-onboarding-1.9.0-1.noarch.rpm" }
 ## Please check and update the latest AS3 URL from https://github.com/F5Networks/f5-appsvcs-extension/releases/latest 
 variable AS3_URL { default = "https://github.com/F5Networks/f5-appsvcs-extension/releases/download/v3.16.0/f5-appsvcs-3.16.0-6.noarch.rpm" }
+
+# target pool settings
+variable "enable_health_check" {
+  description = "Flag to indicate if health check is enabled. If set to true, a firewall rule allowing health check probes is also created."
+  type        = bool
+  #default     = false
+  default     = true
+}
+
+variable "health_check_port" {
+  description = "The TCP port number for the HTTP health check request."
+  type        = number
+  default     = 80
+  #default     = 443
+}
+
+variable "health_check_healthy_threshold" {
+  description = "A so-far unhealthy instance will be marked healthy after this many consecutive successes. The default value is 2."
+  type        = number
+  default     = 2
+}
+
+variable "health_check_unhealthy_threshold" {
+  description = "A so-far healthy instance will be marked unhealthy after this many consecutive failures. The default value is 2."
+  type        = number
+  default     = 2
+}
+
+variable "health_check_interval" {
+  description = "How often (in seconds) to send a health check. Default is 5."
+  type        = number
+  default     = 5
+}
+
+variable "health_check_timeout" {
+  description = "How long (in seconds) to wait before claiming failure. The default value is 5 seconds. It is invalid for 'health_check_timeout' to have greater value than 'health_check_interval'"
+  type        = number
+  default     = 5
+}
+
+variable "health_check_path" {
+  description = "The request path of the HTTP health check request. The default value is '/'."
+  type        = string
+  default     = "/"
+}
+variable "firewall_target_tags" {
+  description = "List of target tags for the health check firewall rule."
+  type        = list(string)
+  default     = []
+}
+variable "session_affinity" {
+  description = "The session affinity for the backends, e.g.: NONE, CLIENT_IP. Default is `NONE`."
+  type        = string
+  #default     = "NONE"
+  default = "CLIENT_IP"
+}

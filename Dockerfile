@@ -1,5 +1,5 @@
 # Setup build arguments with default versions
-ARG TERRAFORM_VERSION=0.12.20
+ARG TERRAFORM_VERSION=0.12.21
 
 # terraform image
 FROM alpine:latest as terraform
@@ -34,7 +34,7 @@ RUN echo "**** install Python ****" && \
     pip3 install --no-cache --upgrade pip setuptools wheel && \
     if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi
 
-RUN apk update && apk add bash curl jq \
+RUN apk update && apk add bash curl jq git \
 && rm -rf /var/cache/apk/*
 COPY --from=terraform /terraform /usr/local/bin/terraform
 

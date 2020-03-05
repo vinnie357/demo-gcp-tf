@@ -2,6 +2,7 @@
 creds/gcp/*.json
 !creds/gcp/my_example_creds.json
 creds.auto.tfvars
+onboard-debug-bash.sh
 
 # Local .terraform directories
 **/.terraform/*
