@@ -5,7 +5,7 @@
     "label": "Cluster onboarding",
     "Common": {
         "class": "Tenant",
-        "hostname": "-device-hostname-",
+        "hostname": "${local_host}.example.com",
         "dbvars": {
             "class": "DbVariables",
             "ui.advisory.enabled": true,

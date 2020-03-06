@@ -548,7 +548,7 @@ done
 
 PROJECTPREFIX=${projectPrefix}
 buildSuffix=${buildSuffix}
-hostName=$(curl -s -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/hostname )
+hostName=$(curl -s -f --retry 20 -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/hostname )
 bigip1url=$(echo "https://storage.googleapis.com/storage/v1/b/"$PROJECTPREFIX"bigip-storage$buildSuffix/o/bigip-1?alt=media")
 bigip2url=$(echo "https://storage.googleapis.com/storage/v1/b/"$PROJECTPREFIX"bigip-storage$buildSuffix/o/bigip-2?alt=media")
 token=$(curl -s -f --retry 20 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token' -H 'Metadata-Flavor: Google' | jq -r .access_token )

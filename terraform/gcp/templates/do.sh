@@ -9,7 +9,7 @@ while [ \$count -le 4 ]
     count=\$[\$count+1]
     # check task code
     taskCount=0
-    while [ \$taskCount -le 5 ]
+    while [ \$taskCount -le 10 ]
     do
         doCodeType=\$(curl -s -u $CREDS -X GET $local_host$doTaskUrl/\$task | jq -r type )
         if [[ "\$doCodeType" == "object" ]]; then

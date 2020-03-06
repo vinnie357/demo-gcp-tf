@@ -47,7 +47,6 @@ tmsh list sys db provision.1nicautoconfig
 # modify asm interface
 cp /etc/ts/common/image.cfg /etc/ts/common/image.cfg.bak
 sed -i "s/iface0=eth0/iface0=eth1/g" /etc/ts/common/image.cfg
-tmsh save sys config
 echo "---done changing interface----"
 # end management swap
 #
@@ -161,7 +160,6 @@ tmsh create auth user $admin_username password $admin_password shell bash partit
 # modify /sys db systemauth.primaryadminuser value $admin_username;
 # submit cli transaction" | tmsh -q
 tmsh list auth user $admin_username
-tmsh save sys config
 # copy ssh key
 mkdir -p /home/$admin_username/.ssh/
 cp /home/admin/.ssh/authorized_keys /home/$admin_username/.ssh/authorized_keys
@@ -179,9 +177,12 @@ tmsh show sys disk directory /appdata
 # 130,985,984 26,128,384 52,256,768
 tmsh modify /sys disk directory /appdata new-size 52256768
 tmsh show sys disk directory /appdata
-tmsh save sys config
 echo "done setting app directory size"
 # end modify appdata directory size
+#
+# save sys config
+tmsh save sys config
+#
 #
 # vars
 #
@@ -703,7 +704,7 @@ submit cli transaction" | tmsh -q
 # modify DO
 PROJECTPREFIX=${projectPrefix}
 buildSuffix=${buildSuffix}
-hostName=\$(curl -s -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/hostname )
+hostName=\$(curl -s -f --retry 20 -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/hostname )
 bigip1url=\$(echo "https://storage.googleapis.com/storage/v1/b/"\$PROJECTPREFIX"bigip-storage\$buildSuffix/o/bigip-1?alt=media")
 bigip2url=\$(echo "https://storage.googleapis.com/storage/v1/b/"\$PROJECTPREFIX"bigip-storage\$buildSuffix/o/bigip-2?alt=media")
 token=\$(curl -s -f --retry 20 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token' -H 'Metadata-Flavor: Google' | jq -r .access_token )
@@ -713,10 +714,14 @@ echo "one: \$bigip1ip"
 echo "two: \$bigip2ip"
 echo " internal address: $INT3ADDRESS "
 echo "sync_ip_01:\$bigip1ip, sync_ip_02:\$bigip2ip"
+sed -i "s/-device-ip-/\$bigip1ip/g" /config/do1.json
+sed -i "s/-device2-ip-/\$bigip2ip/g" /config/do1.json
 sed -i "s/-device-hostname-/\$hostName/g" /config/do1.json
 sed -i "s/-remote-peer-addr-/\$bigip2ip/g" /config/do1.json
 sed -i "s/-mgmt-gw-addr-/$MGMTGATEWAY/g" /config/do1.json
 sed -i "s/-internal-self-address-/$INT3ADDRESS/g" /config/do1.json
+sed -i "s/-device-ip-/\$bigip1ip/g" /config/do2.json
+sed -i "s/-device2-ip-/\$bigip2ip/g" /config/do2.json
 sed -i "s/-device-hostname-/\$hostName/g" /config/do2.json
 sed -i "s/-remote-peer-addr-/\$bigip1ip/g" /config/do2.json
 sed -i "s/-mgmt-gw-addr-/$MGMTGATEWAY/g" /config/do2.json
@@ -742,7 +747,7 @@ while [ \$count -le 4 ]
     count=\$[\$count+1]
     # check task code
     taskCount=0
-    while [ \$taskCount -le 5 ]
+    while [ \$taskCount -le 10 ]
     do
         doCodeType=\$(curl -s -u $CREDS -X GET $local_host$doTaskUrl/\$task | jq -r type )
         if [[ "\$doCodeType" == "object" ]]; then

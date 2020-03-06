@@ -29,6 +29,6 @@ output "load_balancer_ip_address" {
   value       = "https://${module.gcp.load_balancer_ip_address}"
 }
 
-output "buildSuffix" {
+output "buildName" {
   value = "-${random_pet.buildSuffix.id}"
 }

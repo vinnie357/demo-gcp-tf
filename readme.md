@@ -49,3 +49,14 @@ make gcp
 ```bash
 make destroy
 ```
+
+
+### issues
+-----------
+do hostname lengths
+```bash
+  "errors": [
+    "01070903:3: Constraint 'hostname must contain less than 65 characters' failed for '/Common/system'",
+    "01070903:3: Constraint 'hostname must contain less than 65 characters' failed for '/Common/system'"
+  ]
+```
