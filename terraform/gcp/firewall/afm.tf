@@ -146,7 +146,7 @@ resource "google_compute_instance" "vm_instance" {
   count            = "${var.vm_count}"
   name             = "${var.projectPrefix}${var.name}-${count.index + 1}-instance${var.buildSuffix}"
   machine_type = "${var.bigipMachineType}"
-
+  tags = ["allow-health-checks"]
   boot_disk {
     initialize_params {
       image = "${var.bigipImage}"

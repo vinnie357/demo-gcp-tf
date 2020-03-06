@@ -26,5 +26,5 @@ output "f5vm02_mgmt_public_ip" { value = "${var.vm_count >= 2 ? "${google_comput
 
 output "load_balancer_ip_address" {
   description = "IP address of the Load Balancer"
-  value       = google_compute_forwarding_rule.default.ip_address
+  value       = google_compute_global_forwarding_rule.default_tcp.ip_address
 }

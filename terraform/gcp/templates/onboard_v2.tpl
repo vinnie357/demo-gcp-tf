@@ -757,13 +757,15 @@ while [ \$count -le 4 ]
             echo "array \$code check task, breaking"
             break
         else
-            echo "unknown type:\$doCodeType"
+            echo "unknown type: \$doCodeType"
+            code=\$(curl -s -u $CREDS -X GET $local_host$doTaskUrl/\$task | jq .result.code)
         fi
         sleep 1
-        if [[ -n "\$code" ]]; then
+        if jq -e . >/dev/null 2>&1 <<<"\$code"; then
+            echo "Parsed JSON successfully and got something other than false/null"
             status=\$(curl -s -u $CREDS $local_host$doTaskUrl/\$task | jq -r .result.status)
             sleep 1
-            echo "object \$status"
+            echo "status: \$status code: \$code"
             # 200,202,422,400,404,500,422
             echo "DO: \$task response:\$code status:\$status"
             sleep 1
@@ -822,9 +824,10 @@ while [ \$count -le 4 ]
                 ;;
             esac
         else
+            echo "Failed to parse JSON, or got false/null"
             echo "DO status code: \$code"
-            debug=\$(curl -s -u $CREDS $local_host$doTaskUrl/\$task | jq .)
-            echo "debug do code: \$debug"
+            debug=\$(curl -s -u $CREDS $local_host$doTaskUrl/\$task)
+            echo "debug DO code: \$debug"
             # count=\$[\$count+1]
         fi
     done
@@ -892,7 +895,8 @@ function runAS3 () {
                 echo "unknown type:\$as3CodeType"
             fi
             sleep 1
-            if [[ -n "\$code" ]]; then
+            if jq -e . >/dev/null 2>&1 <<<"\$code"; then
+                echo "Parsed JSON successfully and got something other than false/null"
                 status=\$(curl -s -u $CREDS $local_host$as3TaskUrl/\$task | jq -r .results[].message)
                 case \$status in
                 *Error*)
@@ -932,6 +936,7 @@ function runAS3 () {
                 ;;
                 esac
             else
+                echo "Failed to parse JSON, or got false/null"
                 echo "AS3 status code: \$code"
                 debug=\$(curl -s -u $CREDS $local_host$doTaskUrl/\$task | jq .)
                 echo "debug do code: \$debug"

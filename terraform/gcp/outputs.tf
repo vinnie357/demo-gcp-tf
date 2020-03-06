@@ -15,5 +15,5 @@ output "f5vm02_mgmt_public_ip" {
 
 output "load_balancer_ip_address" {
   description = "IP address of the Load Balancer"
-  value       = "https://${module.firewall.load_balancer_ip_address}"
+  value       = "${module.firewall.load_balancer_ip_address}"
 }
