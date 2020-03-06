@@ -44,7 +44,20 @@ plan:
 	-v ${WORK_DIR}/creds/gcp:/creds/gcp:ro \
 	${CONTAINER_IMAGE} \
 	bash -c "terraform init;terraform plan"
-
+outputs:
+	@echo "tf outputs"
+	@docker run --rm -it \
+	--volume ${DIR}:/workspace \
+	-e GCP_SA_FILE=${GCP_SA_FILE} \
+	-e GCP_PROJECT_ID=${GCP_PROJECT_ID} \
+	-e GCP_REGION=${GCP_REGION} \
+	-e VAULT_ADDR=${VAULT_ADDR} \
+	-e VAULT_TOKEN=${VAULT_TOKEN} \
+	-v ${SSH_KEY_DIR}/${SSH_KEY_NAME}.pub:/root/.ssh/${SSH_KEY_NAME}.pub:ro \
+	-v ${SSH_KEY_DIR}/${SSH_KEY_NAME}:/root/.ssh/${SSH_KEY_NAME}:ro \
+	-v ${WORK_DIR}/creds/gcp:/creds/gcp:ro \
+	${CONTAINER_IMAGE} \
+	bash -c "terraform output"
 
 shell:
 	@echo "tf shell ${WORK_DIR}"

@@ -30,5 +30,5 @@ output "load_balancer_ip_address" {
 }
 
 output "buildName" {
-  value = "-${random_pet.buildSuffix.id}"
+  value = "${random_pet.buildSuffix.id}"
 }

@@ -728,7 +728,7 @@ sed -i "s/-mgmt-gw-addr-/$MGMTGATEWAY/g" /config/do2.json
 sed -i "s/-internal-self-address-/$INT3ADDRESS/g" /config/do2.json
 # end modify DO
 # modify as3
-virtualUrl=\$(echo "https://storage.googleapis.com/storage/v1/b/"\$PROJECTPREFIX"bigip-storage/o/glb-1?alt=media")
+virtualUrl=\$(echo "https://storage.googleapis.com/storage/v1/b/"\$PROJECTPREFIX"bigip-storage\$buildSuffix/o/glb-1?alt=media")
 token=\$(curl -s -f --retry 20 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token' -H 'Metadata-Flavor: Google' | jq -r .access_token )
 virtualIp=\$(curl -s -f --retry 20 "\$virtualUrl" -H "Metadata-Flavor: Google" -H "Authorization: Bearer \$token" )
 sdToken=\$(echo "\$token" | base64)
@@ -913,12 +913,12 @@ function runAS3 () {
                 no*change)
                     # finished
                     echo -e "no change: \$task status: \$status tenants: \$tenants "
-                    break 3
+                    break 4
                     ;;
                 in*progress)
                     # in progress
                     echo -e "Running: \$task status: \$status tenants: \$tenants count: \$taskCount "
-                    sleep 60
+                    sleep 120
                     taskCount=\$[\$taskCount+1]
                     ;;
                 *)
@@ -966,6 +966,7 @@ do
         echo "running as3"
         runAS3
         break
+        echo "=== Finished with as3 ==="
     elif [ \$count -le 2 ]; then
         echo "Status code: \$as3Status  As3 not ready yet..."
         count=\$[\$count+1]
