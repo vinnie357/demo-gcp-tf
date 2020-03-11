@@ -111,8 +111,8 @@ variable "enable_health_check" {
 variable "health_check_port" {
   description = "The TCP port number for the HTTP health check request."
   type        = number
-  default     = 80
-  #default     = 443
+  #default     = 80
+  default     = 443
 }
 
 variable "health_check_healthy_threshold" {

@@ -37,9 +37,13 @@ resource "google_compute_instance_group" "firewallext" {
     instances = "${google_compute_instance.vm_instance.*.self_link}"
     network = "${var.ext_vpc.self_link}"
     named_port {
-        name = "app"
-        port = "443"
-    }
+            name = "app"
+            port = "443"
+        }
+    named_port {
+            name = "monitor"
+            port = "80"
+        }
 }
 # ------------------------------------------------------------------------------
 # BACKEND
@@ -48,25 +52,55 @@ resource "google_compute_backend_service" "default" {
   name        = "${var.projectPrefix}backend-service${var.buildSuffix}"
   protocol    = "TCP"
   timeout_sec = 5
-
-  health_checks = [ google_compute_health_check.default_tcp.self_link, google_compute_health_check.default_http.self_link ]
+  # gcp only supports 1 health check 
+  #health_checks = [ google_compute_health_check.default_tcp.self_link, google_compute_health_check.default_http.self_link ]
+  health_checks = [ google_compute_health_check.default_ssl.self_link ]
   backend  {
       group  = google_compute_instance_group.firewallext.self_link
   }
+  port_name = "app"
 }
 
 # ------------------------------------------------------------------------------
-# CREATE HEALTH CHECK
+# CREATE HEALTH CHECKS
 # ------------------------------------------------------------------------------
-resource "google_compute_health_check" "default_tcp" {
-  name               = "${var.projectPrefix}tcp-health-check${var.buildSuffix}"
-  timeout_sec        = 1
-  check_interval_sec = 1
+# tcp
+# resource "google_compute_health_check" "default_tcp" {
+#   name        = "${var.projectPrefix}tcp-health-check${var.buildSuffix}"
+#   description = "Health check via tcp"
 
-  tcp_health_check {
-    port = var.health_check_port
+#   timeout_sec         = 1
+#   check_interval_sec  = 1
+#   healthy_threshold   = 4
+#   unhealthy_threshold = 5
+
+#   tcp_health_check {
+#     port_name          = "app"
+#     port_specification = "USE_NAMED_PORT"
+#     request            = "ARE YOU HEALTHY?"
+#     proxy_header       = "NONE"
+#     response           = "I AM HEALTHY"
+#   }
+# }
+# ssl
+resource "google_compute_health_check" "default_ssl" {
+  name        = "${var.projectPrefix}ssl-health-check${var.buildSuffix}"
+  description = "Health check via ssl"
+
+  timeout_sec         = 1
+  check_interval_sec  = 1
+  healthy_threshold   = 4
+  unhealthy_threshold = 5
+
+  ssl_health_check {
+    port_name          = "app"
+    port_specification = "USE_NAMED_PORT"
+    request            = "ARE YOU HEALTHY?"
+    proxy_header       = "NONE"
+    response           = "I AM HEALTHY"
   }
 }
+# http
 resource "google_compute_health_check" "default_http" {
   name               = "${var.projectPrefix}http-health-check${var.buildSuffix}"
   description = "Health check via http"
@@ -76,9 +110,28 @@ resource "google_compute_health_check" "default_http" {
   unhealthy_threshold = 5
 
   http_health_check {
-    port_name          = "80"
+    port_name          = "app"
     port_specification = "USE_NAMED_PORT"
     request_path       = "/"
+    proxy_header       = "NONE"
+    response           = "System is online."
+  }
+}
+# https
+resource "google_compute_health_check" "default_https" {
+  name        = "${var.projectPrefix}https-health-check${var.buildSuffix}"
+  description = "Health check via https"
+
+  timeout_sec         = 1
+  check_interval_sec  = 1
+  healthy_threshold   = 4
+  unhealthy_threshold = 5
+
+  https_health_check {
+    port_name          = "app"
+    port_specification = "USE_NAMED_PORT"
+    host               = "app.example.com"
+    request_path       = "/health"
     proxy_header       = "NONE"
     response           = "System is online."
   }

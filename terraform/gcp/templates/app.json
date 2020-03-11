@@ -163,7 +163,7 @@
                         "bigip": "/Common/http"
                     },
                     "profileTCP": {
-                        "bigip": "/Common/tcp"
+                        "bigip": "/Common/f5-tcp-progressive"
                     },
                     "virtualAddresses": [
                         "0.0.0.0"
@@ -195,7 +195,7 @@
                     "translateServerPort": true,
                     "class": "Service_TCP",
                     "profileTCP": {
-                        "bigip": "/Common/tcp"
+                        "bigip": "/Common/f5-tcp-progressive"
                     },
                     "virtualAddresses": [
                         "0.0.0.0"
@@ -230,7 +230,7 @@
                         "bigip": "/Common/dos"
                     },
                     "profileTCP": {
-                        "bigip": "/Common/tcp"
+                        "bigip": "/Common/f5-tcp-progressive"
                     },
                     "virtualAddresses": [
                         "0.0.0.0"
@@ -274,7 +274,7 @@
                         "bigip": "/Common/http"
                     },
                     "profileTCP": {
-                        "bigip": "/Common/tcp"
+                        "bigip": "/Common/f5-tcp-progressive"
                     },
                     "virtualAddresses": [
                         "192.168.254.201"
@@ -314,7 +314,7 @@
                     },
                     "serverTLS": "/Common/Shared/sccaBaselineClientSSL",
                     "profileTCP": {
-                        "bigip": "/Common/tcp"
+                        "bigip": "/Common/f5-tcp-progressive"
                     },
                     "virtualAddresses": [
                         "-external-virtual-address-"

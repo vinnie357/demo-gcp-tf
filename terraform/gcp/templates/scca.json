@@ -85,6 +85,44 @@
                         }
                     ]
                     
+                },
+                "gcp_response": {
+                    "class": "iRule",
+                    "iRule": "when CLIENT_ACCEPTED {\n switch [TCP::local_port] {\n 443 { \n virtual /Example/exampleApp/sccaBaselineExampleHTTPS \n }\n 80 {\n virtual /Example/exampleApp/sccaBaselineExampleHTTPS-Redirect- \n }\n default { \n virtual /Example/exampleApp/sccaBaselineExampleHTTPS \n }\n }\n }"
+                },
+                "gcp_local": {
+                    "policyFirewallEnforced": {
+                        "use": "/Common/Shared/sccaBaselineAFMPolicy"
+                    },
+                    "layer4": "tcp",
+                    "iRules": [
+                        "gcp_response"
+                    ],
+                    "securityLogProfiles": [
+                        {
+                            "bigip": "/Common/local_afm_log"
+                        },
+                        {
+                            "bigip": "/Common/local_sec_log"
+                        },
+                        {
+                            "bigip": "/Common/local-dos"
+                        }
+                    ],
+                    "translateServerAddress": true,
+                    "translateServerPort": true,
+                    "class": "Service_TCP",
+                    "profileDOS": {
+                        "bigip": "/Common/dos"
+                    },
+                    "profileTCP": {
+                        "bigip": "/Common/f5-tcp-progressive"
+                    },
+                    "virtualAddresses": [
+                        "-external-self-"
+                    ],
+                    "virtualPort": 0,
+                    "snat": "none"
                 }
             }
         },
@@ -135,9 +173,6 @@
                     "policyFirewallEnforced": {
                         "use": "/Common/Shared/sccaBaselineAFMPolicy"
                     },
-                    "policyFirewallStaged": {
-                        "use": "/Common/Shared/sccaBaselineAFMPolicy"
-                    },
                     "layer4": "tcp",
                     "iRules": [
                         "mgmt_health_irule"
@@ -163,7 +198,7 @@
                         "bigip": "/Common/http"
                     },
                     "profileTCP": {
-                        "bigip": "/Common/tcp"
+                        "bigip": "/Common/f5-tcp-progressive"
                     },
                     "virtualAddresses": [
                         "0.0.0.0"
@@ -195,7 +230,7 @@
                     "translateServerPort": true,
                     "class": "Service_TCP",
                     "profileTCP": {
-                        "bigip": "/Common/tcp"
+                        "bigip": "/Common/f5-tcp-progressive"
                     },
                     "virtualAddresses": [
                         "0.0.0.0"
@@ -205,9 +240,6 @@
                 },
                 "mgmt_ssh": {
                     "policyFirewallEnforced": {
-                        "use": "/Common/Shared/sccaBaselineAFMPolicy"
-                    },
-                    "policyFirewallStaged": {
                         "use": "/Common/Shared/sccaBaselineAFMPolicy"
                     },
                     "layer4": "tcp",
@@ -230,7 +262,7 @@
                         "bigip": "/Common/dos"
                     },
                     "profileTCP": {
-                        "bigip": "/Common/tcp"
+                        "bigip": "/Common/f5-tcp-progressive"
                     },
                     "virtualAddresses": [
                         "0.0.0.0"
@@ -247,9 +279,6 @@
                 "template": "generic",
                 "sccaBaselineExampleIPS": {
                     "policyFirewallEnforced": {
-                        "use": "/Common/Shared/sccaBaselineAFMPolicy"
-                    },
-                    "policyFirewallStaged": {
                         "use": "/Common/Shared/sccaBaselineAFMPolicy"
                     },
                     "layer4": "tcp",
@@ -274,7 +303,7 @@
                         "bigip": "/Common/http"
                     },
                     "profileTCP": {
-                        "bigip": "/Common/tcp"
+                        "bigip": "/Common/f5-tcp-progressive"
                     },
                     "virtualAddresses": [
                         "192.168.254.201"
@@ -286,9 +315,6 @@
                 },
                 "sccaBaselineExampleHTTPS": {
                     "policyFirewallEnforced": {
-                        "use": "/Common/Shared/sccaBaselineAFMPolicyHTTP"
-                    },
-                    "policyFirewallStaged": {
                         "use": "/Common/Shared/sccaBaselineAFMPolicyHTTP"
                     },
                     "layer4": "tcp",
@@ -314,7 +340,7 @@
                     },
                     "serverTLS": "/Common/Shared/sccaBaselineClientSSL",
                     "profileTCP": {
-                        "bigip": "/Common/tcp"
+                        "bigip": "/Common/f5-tcp-progressive"
                     },
                     "virtualAddresses": [
                         "-external-virtual-address-"
