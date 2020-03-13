@@ -88,7 +88,7 @@
                 },
                 "gcp_response": {
                     "class": "iRule",
-                    "iRule": "when CLIENT_ACCEPTED {  set virtualSsl \"/Example/exampleApp/sccaBaselineExampleHTTPS\"\n set virtualHttp \"/Example/exampleApp/sccaBaselineExampleHTTPS-Redirect-\"\n \n switch [TCP::local_port] {\n 443 { \n virtual \\$virtualSsl \n }\n 80 {\n virtual \\$virtualHttp \n }\n default { \n virtual \\$virtualSsl \n }\n }\n }"
+                    "iRule": "when CLIENT_ACCEPTED {  set virtualSsl \"/Example/exampleApp/sccaBaselineExampleHTTPS\"\n set virtualHttp \"/Example/exampleApp/sccaBaselineExampleHTTPS-Redirect-\"\n \n switch [TCP::local_port] {\n 443 { \n virtual \$virtualSsl \n }\n 80 {\n virtual \$virtualHttp \n }\n default { \n virtual \$virtualSsl \n }\n }\n }"
                 },
                 "gcp_local": {
                     "policyFirewallEnforced": {
@@ -313,7 +313,15 @@
                     "pool": "sccaBaselineIPSPool"
                     
                 },
+                "health_check": {
+                    "class": "iRule",
+                    "iRule": "when HTTP_REQUEST {\n if { [HTTP::uri] == \"/health\"} { \n    HTTP::respond 200 content {\n        <html>\n        <head>\n        <title>Health Check</title>\n        </head>\n        <body>\n        System is online.\n        </body>\n        </html>\n        }\n}\n}"
+                },
                 "sccaBaselineExampleHTTPS": {
+                    "class": "Service_HTTPS",
+                    "iRules": [
+                        "health_check"
+                    ],
                     "policyFirewallEnforced": {
                         "use": "/Common/Shared/sccaBaselineAFMPolicyHTTP"
                     },
@@ -331,7 +339,6 @@
                     ],
                     "translateServerAddress": true,
                     "translateServerPort": true,
-                    "class": "Service_HTTPS",
                     "profileDOS": {
                         "bigip": "/Common/dos"
                     },

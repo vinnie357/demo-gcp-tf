@@ -54,7 +54,7 @@ resource "google_compute_backend_service" "default" {
   timeout_sec = 5
   # gcp only supports 1 health check 
   #health_checks = [ google_compute_health_check.default_tcp.self_link, google_compute_health_check.default_http.self_link ]
-  health_checks = [ google_compute_health_check.default_ssl.self_link ]
+  health_checks = [ google_compute_health_check.default_https.self_link ]
   backend  {
       group  = google_compute_instance_group.firewallext.self_link
   }
