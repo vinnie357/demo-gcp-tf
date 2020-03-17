@@ -18,7 +18,6 @@ module "gcp" {
     buildSuffix = "-${random_pet.buildSuffix.id}"
     service_accounts = "${var.gcp_service_accounts}"
 }
-
 resource "random_pet" "buildSuffix" {
   keepers = {
     # Generate a new pet name each time we switch to a new AMI id

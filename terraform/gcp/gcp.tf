@@ -109,20 +109,20 @@ resource "google_compute_firewall" "default-allow-internal-int" {
 # }
 # workloads
 
-module "application" {
-  source   = "./application"
-  #======================#
-  # application settings #
-  #======================#
-  name = "${var.appName}"
-  gce_ssh_pub_key_file = "${var.sshKeyPath}"
-  adminAccountName = "${var.adminAccount}"
-  int_vpc = "${google_compute_network.vpc_network_int}"
-  int_subnet = "${google_compute_subnetwork.vpc_network_int_sub}"
-  projectPrefix = "${var.projectPrefix}"
-  buildSuffix = "${var.buildSuffix}"
-  region = "${var.GCP_REGION}"
-}
+# module "application" {
+#   source   = "./application"
+#   #======================#
+#   # application settings #
+#   #======================#
+#   name = "${var.appName}"
+#   gce_ssh_pub_key_file = "${var.sshKeyPath}"
+#   adminAccountName = "${var.adminAccount}"
+#   int_vpc = "${google_compute_network.vpc_network_int}"
+#   int_subnet = "${google_compute_subnetwork.vpc_network_int_sub}"
+#   projectPrefix = "${var.projectPrefix}"
+#   buildSuffix = "${var.buildSuffix}"
+#   region = "${var.GCP_REGION}"
+# }
 
 module "firewall" {
   source   = "./firewall"
@@ -140,10 +140,11 @@ module "firewall" {
   int_subnet = "${google_compute_subnetwork.vpc_network_int_sub}"
   ext_subnet = "${google_compute_subnetwork.vpc_network_ext_sub}"
   projectPrefix = "${var.projectPrefix}"
-  buildSuffix = "${var.buildSuffix}"
+  buildSuffix = "-${var.buildSuffix}"
   service_accounts = "${var.service_accounts}"
   region = "${var.GCP_REGION}"
 }
+
 
 # module "waf" {
 #   source   = "./waf"

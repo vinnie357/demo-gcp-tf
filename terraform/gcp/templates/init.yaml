@@ -1,0 +1,18 @@
+runtime_parameters: []
+extension_packages:
+    install_operations:
+        - extensionType: do
+          extensionVersion: ${doVersion}
+        - extensionType: as3
+          extensionVersion: ${as3Version}
+        - extensionType: cf
+          extensionVersion: ${cfVersion}
+        - extensionType: ts
+          extensionVersion: ${tsVersion}
+        - extensionType: fast
+          extensionVersion: ${fastVersion}
+extension_services:
+    service_operations:
+      - extensionType: as3
+        type: file
+        value: ./examples/declarations/as3.json

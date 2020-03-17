@@ -54,7 +54,7 @@ variable "bigipMachineType" {
 
 variable "vm_count" {
     description = " number of devices"
-    default = 2
+    default = 3
 }
 
 variable "adminSrcAddr" {

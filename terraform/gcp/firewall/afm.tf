@@ -53,8 +53,27 @@ resource "google_compute_firewall" "apptemp" {
   source_ranges = ["${var.adminSrcAddr}"]
 }
 # Setup Onboarding scripts
+# tmos init config
+data "template_file" "tmos_init_config" {
+  template = "${file("${path.root}/gcp/templates/init.yaml")}"
+
+  vars = {
+    doVersion             = "latest"
+    #example version:
+    #as3Version            = "3.16.0"
+    as3Version            = "latest"
+    tsVersion             = "latest"
+    cfVersion             = "latest"
+    fastVersion           = "0.2.0"
+    doExternalDeclarationUrl = "https://example.domain.com/do.json"
+    as3ExternalDeclarationUrl = "https://example.domain.com/as3.json"
+    tsExternalDeclarationUrl = "https://example.domain.com/ts.json"
+    cfExternalDeclarationUrl = "https://example.domain.com/cf.json"
+  }
+}
+# metat data startup script
 data "template_file" "vm_onboard" {
-  template = "${file("${path.root}/gcp/templates/onboard_v2.tpl")}"
+  template = "${file("${path.root}/gcp/templates/onboard_v3.tpl")}"
 
   vars = {
     uname        	      = "${var.adminAccountName}"
@@ -79,11 +98,13 @@ data "template_file" "vm_onboard" {
     AS3_Document        = "${data.template_file.as3_json.rendered}"
     projectPrefix       = "${var.projectPrefix}"
     buildSuffix         = "${var.buildSuffix}"
+    tmos_init_config    = "${data.template_file.tmos_init_config.rendered}"
   }
 }
+
 #Declarative Onboarding template 01
 data "template_file" "vm01_do_json" {
-  template = "${file("${path.root}/gcp/templates/${var.vm_count >= 2 ? "cluster" : "standalone"}.json")}"
+  template = "${file("${path.root}/gcp/templates/${var.vm_count >= 2 ? "cluster" : "standalone_v2"}.json")}"
 
   vars = {
     #Uncomment the following line for BYOL
