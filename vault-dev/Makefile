@@ -37,4 +37,4 @@ test1:
 	@docker --version
 test2:
 	@# test vault
-	@curl -v http://localhost:${VAULT_PORT}
+	@curl -s --header "X-Vault-Token: ${VAULT_TOKEN}" --request GET    http://127.0.0.1:${VAULT_PORT}/v1/sys/health | jq .
